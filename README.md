@@ -1,3 +1,3 @@
 # Trouble #
 
-A private social network and black book for small groups of friends to help store contacts, record dates and other social events, track and analyze pick-up logistics, etc.
+An app that combines your favorite dating apps into one! Access all your messages from Tinder, Bumble and OKCupid all in one place. Turn on the auto-swiper to get matches while you sleep!
