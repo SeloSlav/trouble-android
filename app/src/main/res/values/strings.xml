@@ -1,0 +1,41 @@
+<resources>
+    <!-- Parse API -->
+    <string name="parse_app_id" translatable="false">5GLNKaTLZ898kuDjes08mMrpGnLtRXgauoLprtzt</string>
+    <string name="parse_client_key" translatable="false">PxTWeW1N0ECbuNPJQIutPy99k8Qk4I2H4PhGZ99Z</string>
+
+    <!-- Authentication -->
+    <string name="com_parse_ui_login_dispatch_user_logged_in" translatable="false">"User logged in, starting: "</string>
+    <string name="com_parse_ui_login_dispatch_user_not_logged_in">User not logged in</string>
+
+    <!-- Activity/Fragment Titles -->
+    <string name="app_name">Trouble</string>
+    <string name="viewpager_contacts">Contacts</string>
+    <string name="viewpager_conversations">Conversations</string>
+
+    <!-- Settings -->
+    <string name="action_settings">Settings</string>
+    <string name="action_logout">Log Out</string>
+    <string name="action_edit_contact">Edit Contact</string>
+
+    <!-- Floating Action Menu -->
+    <string name="bang">Bang</string>
+    <string name="date">Date</string>
+    <string name="contact">Contact</string>
+
+    <!-- Activity Placeholders -->
+    <string name="your_activity_log_is_empty">Your activity log is empty.</string>
+    <string name="rating">Rating</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="add_contact">Add Contact</string>
+    <string name="name">Name</string>
+    <string name="notes">Notes</string>
+    <string name="contact_saved_successfully">Contact saved successfully</string>
+    <string name="please_provide_a_name">Please provide a name</string>
+    <string name="not_internet_connection">No internet connection. Please try again later</string>
+    <string name="contact_deleted">Contact deleted</string>
+    <string name="bio">Bio</string>
+    <string name="platform_name">The name of the dating platform this contact is from</string>
+    <string name="contact_name">Contact Name</string>
+    <string name="send_message">Send Message</string>
+    <string name="type_a_message">Type a message...</string>
+</resources>

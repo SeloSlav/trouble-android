@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer-array name="fab_menu_item_tint_colors">
+        <item>@color/primary</item>
+        <item>@color/primary_dark</item>
+        <item>@color/primary_darker</item>
+    </integer-array>
+
+    <integer-array name="fab_menu_item_colors">
+        <item>@color/black</item>
+        <item>@color/black</item>
+        <item>@color/black</item>
+    </integer-array>
+</resources>
