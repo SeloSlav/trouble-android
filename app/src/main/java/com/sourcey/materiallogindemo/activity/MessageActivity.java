@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.TabLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.PagerAdapter;
@@ -60,11 +61,15 @@ import static com.sourcey.materiallogindemo.R.id.recyclerView;
 
 public class MessageActivity extends AppCompatActivity {
 
+    /* Globals */
     private static final String TAG = MessageActivity.class.getSimpleName();
     protected SwipeRefreshLayout mSwipeRefreshLayout;
     protected RecyclerView mRecyclerView;
     protected List<Message> mMessages;
     private MessageAdapter adapter;
+
+    /* Handler Period */
+    static final int POLL_INTERVAL = 1000; // milliseconds
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +99,19 @@ public class MessageActivity extends AppCompatActivity {
         refreshData(isOnline, conversationObjectId);
         Date newRefreshDate = new Date();
         retrieveConversation(newRefreshDate, true, conversationObjectId);
+
+        // Create a handler which can run code periodically
+
+        final Handler myHandler = new Handler();  // android.os.Handler
+        Runnable mRefreshMessagesRunnable = new Runnable() {
+            @Override
+            public void run() {
+                retrieveConversation(new Date(), true, conversationObjectId);
+                myHandler.postDelayed(this, POLL_INTERVAL);
+            }
+        };
+
+        myHandler.postDelayed(mRefreshMessagesRunnable, POLL_INTERVAL);
 
         // Set layout manager
         LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(getApplicationContext());
@@ -262,23 +280,21 @@ public class MessageActivity extends AppCompatActivity {
                                 message.put("messageText", messageToSend);
                                 message.put("conversationObject", conversation);
 
-                                try {
-                                    // Save message to remote server
-                                    message.save();
+                                message.saveInBackground(new SaveCallback() {
+                                    @Override
+                                    public void done(ParseException e) {
+                                        Toast.makeText(MessageActivity.this, "Successfully created message on Parse",
+                                                Toast.LENGTH_SHORT).show();
 
-                                    // Clear and rop soft keyboard
-                                    myEditText.getText().clear();
-                                    myEditText.setInputType(InputType.TYPE_CLASS_TEXT);
-                                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                                    imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-
-                                    // Retrieve newly posted message
-                                    retrieveConversation(new Date(), true, conversationObjectId);
-
-
-                                } catch (ParseException e1) {
-                                    e1.printStackTrace();
-                                }
+                                        // Retrieve new messages
+                                        retrieveConversation(new Date(), true, conversationObjectId);
+                                    }
+                                });
+                                // Clear and rop soft keyboard
+                                myEditText.getText().clear();
+                                myEditText.setInputType(InputType.TYPE_CLASS_TEXT);
+                                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
 
                             }
                         });
@@ -318,6 +334,10 @@ public class MessageActivity extends AppCompatActivity {
 
                 // If there are no errors, assign Contact objects to adapter
                 if (e == null) {
+
+                    mMessages.clear();
+                    mMessages.addAll(messages);
+
                     mMessages = new ArrayList<>();
                     adapter = new MessageAdapter(getApplicationContext(), messages);
                     adapter.setHasStableIds(true);
