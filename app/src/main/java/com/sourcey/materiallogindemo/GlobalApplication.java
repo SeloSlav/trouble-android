@@ -8,6 +8,8 @@ import com.yitter.android.entity.Contact;
 import com.yitter.android.entity.Conversation;
 import com.yitter.android.entity.Message;
 
+import tgio.parselivequery.LiveQueryClient;
+
 /**
  * Created by @santafebound on 2015-11-07.
  */
@@ -29,6 +31,9 @@ public class GlobalApplication extends Application {
                 .enableLocalDataStore()
                 .build()
         );
+
+        LiveQueryClient.init("wss://trouble.back4app.io", "5GLNKaTLZ898kuDjes08mMrpGnLtRXgauoLprtzt", true);
+        LiveQueryClient.connect();
 
         Parse.setLogLevel(Parse.LOG_LEVEL_DEBUG);
 

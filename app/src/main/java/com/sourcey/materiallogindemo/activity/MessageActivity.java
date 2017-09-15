@@ -1,28 +1,23 @@
 package com.sourcey.materiallogindemo.activity;
 
-import android.app.FragmentManager;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Typeface;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.design.widget.TabLayout;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
+import android.support.annotation.RequiresApi;
+import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.InputType;
-import android.util.TypedValue;
+import android.util.Log;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -30,17 +25,17 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.parse.FindCallback;
+import com.parse.GetCallback;
 import com.parse.ParseException;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
 import com.parse.SaveCallback;
 import com.sourcey.materiallogindemo.R;
-import com.sourcey.materiallogindemo.adapter.ConversationAdapter;
-import com.sourcey.materiallogindemo.adapter.FragmentPagerAdapter;
 import com.sourcey.materiallogindemo.adapter.MessageAdapter;
 import com.sourcey.materiallogindemo.authentication.LoginActivity;
-import com.sourcey.materiallogindemo.fragment.ContactFragment;
 import com.sourcey.materiallogindemo.util.CircleTransform;
 import com.sourcey.materiallogindemo.util.NetworkHelper;
 import com.squareup.picasso.Picasso;
@@ -48,16 +43,18 @@ import com.yitter.android.entity.Contact;
 import com.yitter.android.entity.Conversation;
 import com.yitter.android.entity.Message;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
+import org.json.JSONObject;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.Date;
 import java.util.List;
 
-import io.github.yavski.fabspeeddial.FabSpeedDial;
-import io.github.yavski.fabspeeddial.SimpleMenuListenerAdapter;
-
-import static com.sourcey.materiallogindemo.R.id.recyclerView;
+import tgio.parselivequery.BaseQuery;
+import tgio.parselivequery.LiveQueryEvent;
+import tgio.parselivequery.Subscription;
+import tgio.parselivequery.interfaces.OnListener;
 
 public class MessageActivity extends AppCompatActivity {
 
@@ -69,7 +66,7 @@ public class MessageActivity extends AppCompatActivity {
     private MessageAdapter adapter;
 
     /* Handler Period */
-    static final int POLL_INTERVAL = 1000; // milliseconds
+    static final int POLL_INTERVAL = 3000; // milliseconds
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +80,8 @@ public class MessageActivity extends AppCompatActivity {
         Intent i = getIntent();
         final String conversationObjectId = i.getStringExtra("conversationObjectIdExtra");
         System.out.println("Conversation Object Id (Received): " + conversationObjectId);
+
+        new UpdateTask().execute(conversationObjectId);
 
         // Set toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -111,7 +110,7 @@ public class MessageActivity extends AppCompatActivity {
             }
         };
 
-        myHandler.postDelayed(mRefreshMessagesRunnable, POLL_INTERVAL);
+        // myHandler.postDelayed(mRefreshMessagesRunnable, POLL_INTERVAL);
 
         // Set layout manager
         LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(getApplicationContext());
@@ -183,6 +182,37 @@ public class MessageActivity extends AppCompatActivity {
     }
 
 
+    private class UpdateTask extends AsyncTask<String, String, String> {
+        protected String doInBackground(final String... conversationObjectId) {
+
+            // Subscription
+            final Subscription sub = new BaseQuery.Builder("Message")
+                    .build()
+                    .subscribe();
+
+            sub.on(LiveQueryEvent.CREATE, new OnListener() {
+                @Override
+                public void on(final JSONObject object) {
+                    Log.e("CREATE", object.toString());
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            System.out.println(object.toString());
+                            // {"op":"create","clientId":13,"requestId":0,"object":{"conversationObject":{"__type":"Pointer","className":"Conversation","objectId":"lZsj4dPCvb"},"messageText":"What's your phone number?","author":{"__type":"Pointer","className":"_User","objectId":"2E0bbd3oSD"},"createdAt":"2017-09-15T15:40:39.303Z","updatedAt":"2017-09-15T15:40:39.303Z","__type":"Object","className":"Message","objectId":"7A4RHttAEr"}}
+
+                            // TODO: Take JSON object, convert to GSON, add to mMessages, notify data adapter
+                        }
+                    });
+                }
+            });
+
+
+            return null;
+        }
+
+    }
+
+
     private void refreshData(final boolean isOnline, final String conversationObjectId) {
         mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
@@ -201,9 +231,9 @@ public class MessageActivity extends AppCompatActivity {
 
     private void retrieveConversation(final Date refreshDate, final boolean refresh, final String conversationObjectId) {
 
-        System.out.println("Is this being called?");
+        // System.out.println("Is this being called?");
 
-        ParseQuery<Conversation> conversationQuery = new ParseQuery<>("Conversation");
+        ParseQuery<Conversation> conversationQuery = new ParseQuery<>(Conversation.class);
         conversationQuery.whereEqualTo("objectId", conversationObjectId);
         conversationQuery.findInBackground(new FindCallback<Conversation>() {
 
@@ -213,7 +243,7 @@ public class MessageActivity extends AppCompatActivity {
                 if (e == null) {
 
                     for (final Conversation conversation : conversations) {
-                        System.out.println("Queried Conversation Object: " + conversation);
+                        // System.out.println("Queried Conversation Object: " + conversation);
 
                         // Set Contact ParseObject
                         final Contact contact = conversation.getContact();
@@ -271,7 +301,7 @@ public class MessageActivity extends AppCompatActivity {
                         ImageView sendMessageButton = (ImageView) findViewById(R.id.sendMessageButton);
                         sendMessageButton.setOnClickListener(new View.OnClickListener() {
                             @Override
-                            public void onClick(View v) {
+                            public void onClick(final View v) {
                                 // Create new message
                                 Message message = new Message();
                                 message.put("author", ParseUser.getCurrentUser());
@@ -283,13 +313,14 @@ public class MessageActivity extends AppCompatActivity {
                                 message.saveInBackground(new SaveCallback() {
                                     @Override
                                     public void done(ParseException e) {
-                                        Toast.makeText(MessageActivity.this, "Successfully created message on Parse",
-                                                Toast.LENGTH_SHORT).show();
+                                        Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
+                                                .setAction("Action", null).show();
 
                                         // Retrieve new messages
-                                        retrieveConversation(new Date(), true, conversationObjectId);
+                                        retrieveMessages(refreshDate, refresh, conversation);
                                     }
                                 });
+
                                 // Clear and rop soft keyboard
                                 myEditText.getText().clear();
                                 myEditText.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -299,10 +330,49 @@ public class MessageActivity extends AppCompatActivity {
                             }
                         });
 
+                        // Send sample message from Megan
+                        ImageView meganProfilePicture = (ImageView) findViewById(R.id.contact_profilePicture);
+                        meganProfilePicture.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(final View v) {
+                                // Create new message
+                                final Message newMessage = new Message();
+
+                                // Set Contact value
+                                ParseQuery<Contact> contactParseQuery = new ParseQuery<>(Contact.class);
+                                contactParseQuery.whereEqualTo("objectId", "asRB44nZqn");
+                                contactParseQuery.getFirstInBackground(new GetCallback<Contact>() {
+                                    @Override
+                                    public void done(Contact contactObject, ParseException e) {
+                                        // System.out.println("Contact Name: " + object.getName());
+                                        newMessage.put("contact", contactObject);
+                                    }
+                                });
+
+                                newMessage.put("messageText", "Hey sweetie!");
+                                newMessage.put("conversationObject", conversation);
+
+                                newMessage.saveInBackground(new SaveCallback() {
+                                    @Override
+                                    public void done(ParseException e) {
+                                        /*Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
+                                                .setAction("Action", null).show();*/
+
+                                        // Retrieve new messages
+                                        retrieveMessages(refreshDate, refresh, conversation);
+                                    }
+                                });
+
+                                // Clear and rop soft keyboard
+                                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+                            }
+                        });
+
                         // Turn off loading indicator
                         mSwipeRefreshLayout.setRefreshing(false);
 
-                        // If there are no errors, assign Contact objects to adapter
+                        // Retrieve new messages
                         retrieveMessages(refreshDate, refresh, conversation);
                     }
                 }
@@ -312,7 +382,7 @@ public class MessageActivity extends AppCompatActivity {
     }
 
     private void retrieveMessages(Date refreshDate, boolean refresh, Conversation conversation) {
-        ParseQuery<Message> messageQuery = new ParseQuery<>("Message");
+        ParseQuery<Message> messageQuery = new ParseQuery<>(Message.class);
         messageQuery.whereEqualTo("conversationObject", conversation);
         if (!refresh) {
             messageQuery.fromLocalDatastore(); // Query from local database on app start-up only
@@ -335,12 +405,13 @@ public class MessageActivity extends AppCompatActivity {
                 // If there are no errors, assign Contact objects to adapter
                 if (e == null) {
 
-                    mMessages.clear();
-                    mMessages.addAll(messages);
+                    if (mMessages != null) {
+                        mMessages.clear();
+                        mMessages.addAll(messages);
+                    }
 
-                    mMessages = new ArrayList<>();
                     adapter = new MessageAdapter(getApplicationContext(), messages);
-                    adapter.setHasStableIds(true);
+                    // adapter.setHasStableIds(true);
                     mRecyclerView.setAdapter(adapter);
 
                 }
