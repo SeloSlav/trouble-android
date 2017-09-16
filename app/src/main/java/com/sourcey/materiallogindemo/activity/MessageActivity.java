@@ -200,7 +200,6 @@ public class MessageActivity extends AppCompatActivity {
             sub.on(LiveQueryEvent.CREATE, new OnListener() {
                 @Override
                 public void on(final JSONObject object) {
-                    Log.e(getClass().getName(), object.toString());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -216,7 +215,22 @@ public class MessageActivity extends AppCompatActivity {
                             // TODO: Take JSON object, convert to GSON, add to mMessages, notify data adapter
                             if (newObject != null) {
                                 Log.e(getClass().toString(), "This object is not null!");
-                                mMessages.add(0, newObject);
+
+                                ParseQuery<Message> obvMessageQuery = new ParseQuery<>(Message.class);
+                                obvMessageQuery.whereEqualTo("objectId", "tMfyStFZec");
+                                obvMessageQuery.findInBackground(new FindCallback<Message>() {
+                                    @Override
+                                    public void done(List<Message> messages, ParseException e) {
+
+                                        if (e == null) {
+                                            for (Message obvMessage : messages) {
+                                                mMessages.add(0, obvMessage);
+                                            }
+                                        }
+
+                                    }
+                                });
+
                             }
 
                         }
@@ -252,6 +266,7 @@ public class MessageActivity extends AppCompatActivity {
 
         ParseQuery<Conversation> conversationQuery = new ParseQuery<>(Conversation.class);
         conversationQuery.whereEqualTo("objectId", conversationObjectId);
+        conversationQuery.include("contact");
         conversationQuery.findInBackground(new FindCallback<Conversation>() {
 
             @Override
@@ -331,12 +346,9 @@ public class MessageActivity extends AppCompatActivity {
                                 message.saveInBackground(new SaveCallback() {
                                     @Override
                                     public void done(ParseException e) {
-                                        /*Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
-                                                .setAction("Action", null).show();*/
 
                                         // Retrieve new messages
-                                        // retrieveMessages(refreshDate, refresh, conversation);
-
+                                        retrieveMessages(refreshDate, true, conversation);
 
                                     }
                                 });
@@ -362,7 +374,7 @@ public class MessageActivity extends AppCompatActivity {
 
                                 // Set Contact value
                                 ParseQuery<Contact> contactParseQuery = new ParseQuery<>("Contact");
-                                contactParseQuery.whereEqualTo("objectId", "asRB44nZqn");
+                                contactParseQuery.whereEqualTo("objectId", conversation.getContact().getObjectId());
 
                                 try {
                                     newMessage.put("contact", contactParseQuery.getFirst());
@@ -378,7 +390,7 @@ public class MessageActivity extends AppCompatActivity {
                                     @Override
                                     public void done(ParseException e) {
                                         // Retrieve new messages
-                                        retrieveMessages(refreshDate, refresh, conversation);
+                                        retrieveMessages(refreshDate, true, conversation);
                                     }
                                 });
 
@@ -392,7 +404,7 @@ public class MessageActivity extends AppCompatActivity {
                         mSwipeRefreshLayout.setRefreshing(false);
 
                         // Retrieve new messages
-                        retrieveMessages(refreshDate, refresh, conversation);
+                        retrieveMessages(refreshDate, true, conversation);
                     }
                 }
             }
@@ -403,12 +415,12 @@ public class MessageActivity extends AppCompatActivity {
     private void retrieveMessages(Date refreshDate, boolean refresh, final Conversation conversation) {
         ParseQuery<Message> messageQuery = new ParseQuery<>(Message.class);
         messageQuery.whereEqualTo("conversationObject", conversation);
-        if (!refresh) {
+        /*if (!refresh) {
             messageQuery.fromLocalDatastore(); // Query from local database on app start-up only
         }
         if (refresh) {
             messageQuery.whereLessThanOrEqualTo("createdAt", refreshDate); // Append only new data to the list when actively requesting remote data
-        }
+        }*/
         messageQuery.addAscendingOrder("createdAt");
         messageQuery.include("author");
         messageQuery.include("contact");
@@ -434,7 +446,15 @@ public class MessageActivity extends AppCompatActivity {
                         mMessages.addAll(messages);*/
 
                         // Listen for new Message objects and update UI
-                        new UpdateTask().execute();
+                        // new UpdateTask().execute();
+
+                        /*ParseQuery<Message> obvMessageQuery = new ParseQuery<>(Message.class);
+                        obvMessageQuery.whereEqualTo("objectId", "tMfyStFZec");
+                        try {
+                            mMessages.add(0, obvMessageQuery.getFirst());
+                        } catch (ParseException e1) {
+                            e1.printStackTrace();
+                        }*/
 
                         adapter.notifyDataSetChanged();
 
