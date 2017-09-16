@@ -60,6 +60,9 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
     @Override
     public void onBindViewHolder(ConversationViewHolder holder, int position) {
         bindContactItemView((ConversationItemView) holder.itemView, position);
+
+        // Conversation.unpinAllInBackground(mContacts);
+        // Conversation.pinAllInBackground(mContacts); // Store in local database
     }
 
 
@@ -153,9 +156,6 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
 
         // Display attached profile picture
         downloadProfilePicture(conversationItemView, contact);
-
-        Conversation.unpinAllInBackground(mContacts);
-        Conversation.pinAllInBackground(mContacts); // Store in local database
     }
 
 

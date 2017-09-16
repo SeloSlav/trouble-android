@@ -19,6 +19,7 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -27,6 +28,8 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.parse.FindCallback;
 import com.parse.GetCallback;
 import com.parse.ParseException;
@@ -48,6 +51,8 @@ import org.json.JSONObject;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -80,8 +85,6 @@ public class MessageActivity extends AppCompatActivity {
         Intent i = getIntent();
         final String conversationObjectId = i.getStringExtra("conversationObjectIdExtra");
         System.out.println("Conversation Object Id (Received): " + conversationObjectId);
-
-        new UpdateTask().execute(conversationObjectId);
 
         // Set toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -183,29 +186,43 @@ public class MessageActivity extends AppCompatActivity {
 
 
     private class UpdateTask extends AsyncTask<String, String, String> {
-        protected String doInBackground(final String... conversationObjectId) {
+        protected final String doInBackground(final String... strings) {
+            Log.e(getClass().getName(), "ASYNC");
+            Log.e(getClass().getName(), Arrays.toString(strings));
 
             // Subscription
             final Subscription sub = new BaseQuery.Builder("Message")
                     .build()
                     .subscribe();
 
+            Log.e(getClass().getName(), String.valueOf(sub.isSubscribed()));
+
             sub.on(LiveQueryEvent.CREATE, new OnListener() {
                 @Override
                 public void on(final JSONObject object) {
-                    Log.e("CREATE", object.toString());
+                    Log.e(getClass().getName(), object.toString());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            System.out.println(object.toString());
+                            Log.e(getClass().toString(), object.toString());
                             // {"op":"create","clientId":13,"requestId":0,"object":{"conversationObject":{"__type":"Pointer","className":"Conversation","objectId":"lZsj4dPCvb"},"messageText":"What's your phone number?","author":{"__type":"Pointer","className":"_User","objectId":"2E0bbd3oSD"},"createdAt":"2017-09-15T15:40:39.303Z","updatedAt":"2017-09-15T15:40:39.303Z","__type":"Object","className":"Message","objectId":"7A4RHttAEr"}}
 
+                            String mJsonString = object.toString();
+                            JsonParser parser = new JsonParser();
+                            JsonElement mJson =  parser.parse(mJsonString);
+                            Gson gson = new Gson();
+                            Message newObject = gson.fromJson(mJson, Message.class);
+
                             // TODO: Take JSON object, convert to GSON, add to mMessages, notify data adapter
+                            if (newObject != null) {
+                                Log.e(getClass().toString(), "This object is not null!");
+                                mMessages.add(0, newObject);
+                            }
+
                         }
                     });
                 }
             });
-
 
             return null;
         }
@@ -309,19 +326,22 @@ public class MessageActivity extends AppCompatActivity {
                                 String messageToSend = myEditText.getText().toString();
                                 message.put("messageText", messageToSend);
                                 message.put("conversationObject", conversation);
+                                message.put("conversationObjectId", conversation.getObjectId());
 
                                 message.saveInBackground(new SaveCallback() {
                                     @Override
                                     public void done(ParseException e) {
-                                        Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
-                                                .setAction("Action", null).show();
+                                        /*Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
+                                                .setAction("Action", null).show();*/
 
                                         // Retrieve new messages
-                                        retrieveMessages(refreshDate, refresh, conversation);
+                                        // retrieveMessages(refreshDate, refresh, conversation);
+
+
                                     }
                                 });
 
-                                // Clear and rop soft keyboard
+                                // Clear and drop soft keyboard
                                 myEditText.getText().clear();
                                 myEditText.setInputType(InputType.TYPE_CLASS_TEXT);
                                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -335,35 +355,34 @@ public class MessageActivity extends AppCompatActivity {
                         meganProfilePicture.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(final View v) {
+                                v.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.image_click));
+
                                 // Create new message
                                 final Message newMessage = new Message();
 
                                 // Set Contact value
-                                ParseQuery<Contact> contactParseQuery = new ParseQuery<>(Contact.class);
+                                ParseQuery<Contact> contactParseQuery = new ParseQuery<>("Contact");
                                 contactParseQuery.whereEqualTo("objectId", "asRB44nZqn");
-                                contactParseQuery.getFirstInBackground(new GetCallback<Contact>() {
-                                    @Override
-                                    public void done(Contact contactObject, ParseException e) {
-                                        // System.out.println("Contact Name: " + object.getName());
-                                        newMessage.put("contact", contactObject);
-                                    }
-                                });
+
+                                try {
+                                    newMessage.put("contact", contactParseQuery.getFirst());
+                                } catch (ParseException e1) {
+                                    e1.printStackTrace();
+                                }
 
                                 newMessage.put("messageText", "Hey sweetie!");
                                 newMessage.put("conversationObject", conversation);
+                                newMessage.put("conversationObjectId", conversation.getObjectId());
 
                                 newMessage.saveInBackground(new SaveCallback() {
                                     @Override
                                     public void done(ParseException e) {
-                                        /*Snackbar.make(v, "Message has been sent!", Snackbar.LENGTH_LONG)
-                                                .setAction("Action", null).show();*/
-
                                         // Retrieve new messages
                                         retrieveMessages(refreshDate, refresh, conversation);
                                     }
                                 });
 
-                                // Clear and rop soft keyboard
+                                // Clear and drop soft keyboard
                                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                                 imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
                             }
@@ -381,7 +400,7 @@ public class MessageActivity extends AppCompatActivity {
 
     }
 
-    private void retrieveMessages(Date refreshDate, boolean refresh, Conversation conversation) {
+    private void retrieveMessages(Date refreshDate, boolean refresh, final Conversation conversation) {
         ParseQuery<Message> messageQuery = new ParseQuery<>(Message.class);
         messageQuery.whereEqualTo("conversationObject", conversation);
         if (!refresh) {
@@ -393,11 +412,11 @@ public class MessageActivity extends AppCompatActivity {
         messageQuery.addAscendingOrder("createdAt");
         messageQuery.include("author");
         messageQuery.include("contact");
+        messageQuery.setLimit(1000);
         messageQuery.findInBackground(new FindCallback<Message>() {
 
             @Override
             public void done(List<Message> messages, ParseException e) {
-                System.out.println("Messages: " + messages);
 
                 // Turn off loading indicator
                 mSwipeRefreshLayout.setRefreshing(false);
@@ -405,14 +424,21 @@ public class MessageActivity extends AppCompatActivity {
                 // If there are no errors, assign Contact objects to adapter
                 if (e == null) {
 
-                    if (mMessages != null) {
-                        mMessages.clear();
-                        mMessages.addAll(messages);
-                    }
-
                     adapter = new MessageAdapter(getApplicationContext(), messages);
                     // adapter.setHasStableIds(true);
                     mRecyclerView.setAdapter(adapter);
+
+                    if (mMessages != null) {
+
+                        /*mMessages.clear();
+                        mMessages.addAll(messages);*/
+
+                        // Listen for new Message objects and update UI
+                        new UpdateTask().execute();
+
+                        adapter.notifyDataSetChanged();
+
+                    }
 
                 }
             }

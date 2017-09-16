@@ -40,7 +40,7 @@ public class ContactFragment extends Fragment {
 
         // Retrieve data from local datastore
         Date initialDate = new Date();
-        retrieveData(initialDate, false);
+        retrieveData(initialDate, true);
 
         // Test local datastore
         // testLocalDatastore();
@@ -114,9 +114,9 @@ public class ContactFragment extends Fragment {
 
     private void retrieveData(Date refreshDate, boolean refresh) {
         ParseQuery<Conversation> contactQuery = new ParseQuery<>("Conversation");
-        if (!refresh) {
+        /*if (!refresh) {
             contactQuery.fromLocalDatastore(); // Query from local database on app start-up only
-        }
+        }*/
         if (refresh) {
             contactQuery.whereLessThanOrEqualTo("createdAt", refreshDate); // Append only new data to the list when actively requesting remote data
         }
